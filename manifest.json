@@ -1,0 +1,36 @@
+{
+    "name": "AWS Icon Search for Excalidraw",
+    "description": "Search & drop AWS architecture icons inside Excalidraw.",
+    "version": "0.1.1",
+    "manifest_version": 3,
+    
+    "icons": {
+        "128": "128.jpg"
+    },
+    
+    "action": {
+        "default_title": "AWS Icon Search"
+    },
+    
+    "background": {
+        "service_worker": "background.js"
+    },
+    
+    "content_scripts": [{
+        "matches": ["https://excalidraw.com/*", "https://app.excalidraw.com/*"],
+        "js": ["inject.js"],
+        "run_at": "document_idle"
+    }],
+    
+    "permissions": ["activeTab"],
+    "host_permissions": ["https://excalidraw.com/*", "https://app.excalidraw.com/*"],
+    
+    "web_accessible_resources": [{
+        "resources": [
+            "fuse.min.js",
+            "aws-icon-pack.excalidrawlib", 
+            "aws-index.json"
+        ],
+        "matches": ["https://excalidraw.com/*", "https://app.excalidraw.com/*"]
+    }]
+}
