@@ -281,48 +281,102 @@ console.log('🚀 AWS Extension inject.js loaded!');
                 await navigator.clipboard.writeText(JSON.stringify(clipboardData));
                 
                 console.log('📋 Copied to clipboard');
-                showFeedback(`Copied ${item.name} to clipboard - Press Ctrl+V to paste`);
                 
-                // Try to automatically paste
-                setTimeout(() => {
-                    const canvas = document.querySelector('canvas');
-                    if (canvas) {
-                        canvas.focus();
-                        
-                        // Simulate Ctrl+V
-                        const pasteEvent = new KeyboardEvent('keydown', {
-                            key: 'v',
-                            code: 'KeyV',
-                            ctrlKey: true,
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        
-                        canvas.dispatchEvent(pasteEvent);
-                        document.dispatchEvent(pasteEvent);
-                        
-                        // Also try paste event
-                        const clipboardEvent = new ClipboardEvent('paste', {
-                            clipboardData: new DataTransfer(),
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        
-                        // Set clipboard data
-                        clipboardEvent.clipboardData.setData('text/plain', JSON.stringify(clipboardData));
-                        
-                        canvas.dispatchEvent(clipboardEvent);
-                        document.dispatchEvent(clipboardEvent);
-                        
-                        console.log('⌨️ Simulated paste operation');
+                // Hide search first to ensure canvas can be focused
+                hideSearch();
+                
+                // Try multiple selectors to find the canvas/excalidraw container
+                const focusTargets = [
+                    'canvas',
+                    '.excalidraw-canvas',
+                    '.excalidraw',
+                    '[class*="excalidraw"]',
+                    'main',
+                    '.canvas-container',
+                    '[role="img"]' // Sometimes Excalidraw uses this
+                ];
+                
+                let focusElement = null;
+                
+                for (const selector of focusTargets) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        focusElement = element;
+                        console.log('🎯 Found focus target:', selector);
+                        break;
                     }
-                }, 100);
+                }
+                
+                if (focusElement) {
+                    // Try multiple focus strategies
+                    setTimeout(() => {
+                        try {
+                            // Strategy 1: Direct focus
+                            focusElement.focus();
+                            
+                            // Strategy 2: Click to focus (sometimes needed for canvas)
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            focusElement.dispatchEvent(clickEvent);
+                            
+                            // Strategy 3: Set tabindex and focus
+                            if (!focusElement.hasAttribute('tabindex')) {
+                                focusElement.setAttribute('tabindex', '-1');
+                            }
+                            focusElement.focus();
+                            
+                            console.log('✅ Canvas focused successfully');
+                            
+                            // Now try to paste
+                            setTimeout(() => {
+                                // Simulate Ctrl+V
+                                const pasteEvent = new KeyboardEvent('keydown', {
+                                    key: 'v',
+                                    code: 'KeyV',
+                                    ctrlKey: true,
+                                    bubbles: true,
+                                    cancelable: true
+                                });
+                                
+                                focusElement.dispatchEvent(pasteEvent);
+                                document.dispatchEvent(pasteEvent);
+                                
+                                // Also try paste event
+                                const clipboardEvent = new ClipboardEvent('paste', {
+                                    clipboardData: new DataTransfer(),
+                                    bubbles: true,
+                                    cancelable: true
+                                });
+                                
+                                // Set clipboard data
+                                clipboardEvent.clipboardData.setData('text/plain', JSON.stringify(clipboardData));
+                                
+                                focusElement.dispatchEvent(clipboardEvent);
+                                document.dispatchEvent(clipboardEvent);
+                                
+                                console.log('⌨️ Simulated paste operation');
+                            }, 200); // Slightly longer delay for paste
+                            
+                        } catch (error) {
+                            console.log('❌ Focus/paste failed:', error);
+                        }
+                    }, 100);
+                    
+                    showFeedback(`Inserted: ${item.name}`);
+                } else {
+                    console.log('❌ Could not find canvas to focus');
+                    showFeedback(`Copied ${item.name} to clipboard - Click on canvas and press Ctrl+V to paste`);
+                }
                 
             } catch (error) {
                 console.log('❌ Clipboard insertion failed:', error);
                 showFeedback(`Error: ${error.message}`);
             }
         }
+        
         
         function generateRandomId() {
             return Math.random().toString(36).substr(2, 9);
@@ -388,7 +442,11 @@ console.log('🚀 AWS Extension inject.js loaded!');
             searchContainer.style.display = 'none';
             searchInput.value = '';
             resultsContainer.innerHTML = '';
+            
+            // Remove focus from search input
+            searchInput.blur();
         }
+        
 
         // Click outside to close
         document.addEventListener('click', (e) => {

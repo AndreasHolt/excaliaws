@@ -1,14 +1,7 @@
 [
     "VPC",
     "Region",
-    "S3 bucket",
-    "Lambda function",
-    "RDS database",
-    "AWS CloudFront",
-    "AWS CloudWatch",
-    "AWS CloudTrail",
-    "AWS CloudFormation",
-    "AWS CloudSearch",
-    "AWS CloudSearch",
-    "AWS CloudSearch"
-  ]
+    "IAM",
+    "Route53",
+    "EventBridge"
+]
