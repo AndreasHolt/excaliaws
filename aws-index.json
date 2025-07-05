@@ -1,5 +1,6 @@
 [
-    "EC2 instance",
+    "VPC",
+    "Region",
     "S3 bucket",
     "Lambda function",
     "RDS database",

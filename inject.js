@@ -29,15 +29,16 @@ console.log('🚀 AWS Extension inject.js loaded!');
         const lib = await libResponse.json();
         const names = await namesResponse.json();
         
-        console.log('📊 Library loaded:', lib.library?.length || 0, 'items');
+        console.log('📊 Library loaded:', lib.libraryItems?.length || 0, 'items');
         console.log('🏷️ Names loaded:', names.length, 'names');
         
         // Create items for search
-        const items = lib.library.map((elements, i) => ({ 
-            name: names[i] ?? `item-${i}`, 
-            elements 
-        }));
-
+                // Create items for search - extract elements from clipboard format
+                const items = lib.libraryItems.map((clipboardItem, i) => ({ 
+                    name: names[i] ?? `item-${i}`, 
+                    elements: clipboardItem.elements  // Extract elements from clipboard wrapper
+                }));
+        
         console.log('✅ Items created for search:', items.length);
 
         // Simple search function
@@ -369,6 +370,7 @@ console.log('🚀 AWS Extension inject.js loaded!');
                     highlighted.click();
                 } else if (currentResults.length > 0) {
                     insertIcon(currentResults[0].item);
+                    hideSearch();
                 }
             } else if (e.key === 'Escape') {
                 hideSearch();
