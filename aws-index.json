@@ -6,7 +6,7 @@
     "EventBridge",
     "SNS",
     "SQS",
-    "SNS",
+    "SES",
     "VPN Gateway",
     "Internet Gateway",
     "NAT Gateway",
@@ -31,5 +31,12 @@
     "Private Subnet",
     "CloudFront",
     "Route Table",
-    "VPN Connection"
+    "VPN Connection",
+    "Container",
+    "Instance",
+    "Instances",
+    "Spot Instances",
+    "Aurora",
+    "Fargate",
+    "Task"
 ]
