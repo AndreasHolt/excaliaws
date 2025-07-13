@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "description": "Configuration for available icon packs in Excaliaws extension",
+  "packs": [
+    {
+      "id": "aws-official",
+      "name": "AWS Architecture Icons", 
+      "description": "Official AWS architecture icons",
+      "file": "aws-icons-integrated.json",
+      "enabled": true,
+      "priority": 1
+    }
+  ],
+  "settings": {
+    "maxResults": 10,
+    "defaultPack": "aws-official",
+    "enableCategorySearch": true,
+    "enableKeywordSearch": true
+  }
+}

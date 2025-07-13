@@ -28,8 +28,8 @@
     "web_accessible_resources": [{
         "resources": [
             "fuse.min.js",
-            "aws-icon-pack.excalidrawlib", 
-            "aws-index.json"
+            "icon-packs-config.json",
+            "aws-icons-integrated.json"
         ],
         "matches": ["https://excalidraw.com/*", "https://app.excalidraw.com/*"]
     }]

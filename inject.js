@@ -14,44 +14,83 @@ console.log('🚀 AWS Extension inject.js loaded!');
 
         console.log('✅ DOM ready');
 
-        // Load our libraries
-        console.log('📚 Loading AWS library...');
-        const [libResponse, namesResponse] = await Promise.all([
-            fetch(chrome.runtime.getURL('aws-icon-pack.excalidrawlib')),
-            fetch(chrome.runtime.getURL('aws-index.json'))
-        ]);
+        // Load icon packs configuration
+        console.log('📚 Loading icon packs configuration...');
+        const configResponse = await fetch(chrome.runtime.getURL('icon-packs-config.json'));
         
-        if (!libResponse.ok || !namesResponse.ok) {
-            console.error('❌ Failed to load library files');
+        if (!configResponse.ok) {
+            console.error('❌ Failed to load icon packs configuration');
             return;
         }
         
-        const lib = await libResponse.json();
-        const names = await namesResponse.json();
+        const config = await configResponse.json();
+        const enabledPacks = config.packs.filter(pack => pack.enabled).sort((a, b) => a.priority - b.priority);
         
-        console.log('📊 Library loaded:', lib.libraryItems?.length || 0, 'items');
-        console.log('🏷️ Names loaded:', names.length, 'names');
+        console.log('🎯 Found', enabledPacks.length, 'enabled icon packs');
         
-        // Create items for search
-                // Create items for search - extract elements from clipboard format
-                const items = lib.libraryItems.map((clipboardItem, i) => ({ 
-                    name: names[i] ?? `item-${i}`, 
-                    elements: clipboardItem.elements  // Extract elements from clipboard wrapper
+        // Load all enabled icon packs
+        const allItems = [];
+        for (const packConfig of enabledPacks) {
+            try {
+                console.log(`📦 Loading ${packConfig.name}...`);
+                const packResponse = await fetch(chrome.runtime.getURL(packConfig.file));
+                
+                if (!packResponse.ok) {
+                    console.warn(`⚠️ Failed to load ${packConfig.name}`);
+                    continue;
+                }
+                
+                const iconPack = await packResponse.json();
+                
+                // Convert pack icons to search items
+                const packItems = Object.entries(iconPack.icons).map(([key, iconData]) => ({
+                    key: key,
+                    name: iconData.name,
+                    keywords: iconData.keywords,
+                    category: iconData.category,
+                    description: iconData.description,
+                    elements: iconData.clipboardData.elements,
+                    pack: {
+                        id: packConfig.id,
+                        name: packConfig.name
+                    }
                 }));
+                
+                allItems.push(...packItems);
+                console.log(`✅ Loaded ${packItems.length} icons from ${packConfig.name}`);
+                
+            } catch (error) {
+                console.error(`❌ Error loading ${packConfig.name}:`, error);
+            }
+        }
+        
+        const items = allItems;
+        console.log('📊 Total icons loaded:', items.length);
+        console.log('🎨 Categories:', new Set(items.map(icon => icon.category)).size);
+        console.log('📦 Icon packs:', new Set(items.map(icon => icon.pack.name)).size);
         
         console.log('✅ Items created for search:', items.length);
 
         let selectedIndex = -1; // Track which result is currently selected
 
 
-        // Simple search function
+        // Enhanced search function with keyword and category support
         function searchItems(query) {
             if (!query.trim()) return [];
             
             const lowerQuery = query.toLowerCase();
-            return items.filter(item => 
-                item.name.toLowerCase().includes(lowerQuery)
-            ).map(item => ({ item })); // Match Fuse.js structure
+            return items.filter(item => {
+                // Search in name
+                if (item.name.toLowerCase().includes(lowerQuery)) return true;
+                
+                // Search in keywords
+                if (item.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))) return true;
+                
+                // Search in category
+                if (item.category.toLowerCase().includes(lowerQuery)) return true;
+                
+                return false;
+            }).map(item => ({ item })); // Match Fuse.js structure
         }
 
         // Create search interface
@@ -141,8 +180,30 @@ searchInput.setAttribute('placeholder', 'Search icons...');
                     font-size: 14px;
                     transition: background-color 0.1s ease;
                     background: transparent;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
                 `;
-                item.textContent = result.item.name;
+                
+                // Main icon name
+                const nameElement = document.createElement('div');
+                nameElement.style.cssText = `
+                    font-weight: 500;
+                    font-size: 14px;
+                `;
+                nameElement.textContent = result.item.name;
+                
+                // Category and pack info
+                const metaElement = document.createElement('div');
+                metaElement.style.cssText = `
+                    font-size: 12px;
+                    color: #b8b8b8;
+                    opacity: 0.8;
+                `;
+                metaElement.textContent = `${result.item.category} • ${result.item.pack.name}`;
+                
+                item.appendChild(nameElement);
+                item.appendChild(metaElement);
                 item.addEventListener('click', () => insertIcon(result.item));
                 
                 // Updated hover handling that respects keyboard selection
