@@ -41,6 +41,9 @@ console.log('🚀 AWS Extension inject.js loaded!');
         
         console.log('✅ Items created for search:', items.length);
 
+        let selectedIndex = -1; // Track which result is currently selected
+
+
         // Simple search function
         function searchItems(query) {
             if (!query.trim()) return [];
@@ -55,38 +58,59 @@ console.log('🚀 AWS Extension inject.js loaded!');
         const searchContainer = document.createElement('div');
         searchContainer.id = 'aws-search-container';
         searchContainer.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 999999;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: none;
-            min-width: 300px;
-        `;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999999;
+    background: #31303b;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: none;
+    width: 500px;
+    max-width: 90vw;
+    font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+`;
 
+                
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.placeholder = 'Search AWS icons...';
         searchInput.style.cssText = `
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px 8px 0 0;
-            font-size: 14px;
-            outline: none;
-            box-sizing: border-box;
-        `;
+    width: 100%;
+    padding: 16px 16px 16px 50px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 16px;
+    outline: none;
+    box-sizing: border-box;
+    background: #31303b;
+    color: #e3e3e8;
+    font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="rgb(184, 184, 184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>');
+    background-repeat: no-repeat;
+    background-position: 16px center;
+    background-size: 20px 20px;
+`;
 
+searchInput.setAttribute('placeholder', 'Search icons...');
+
+        
         const resultsContainer = document.createElement('div');
         resultsContainer.style.cssText = `
-            max-height: 200px;
-            overflow-y: auto;
-            border-top: 1px solid #eee;
-        `;
-
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border-top: 1px solid #4a4a4a;
+    background: #31303b;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+`;
+                
         searchContainer.appendChild(searchInput);
         searchContainer.appendChild(resultsContainer);
         document.body.appendChild(searchContainer);
@@ -97,31 +121,105 @@ console.log('🚀 AWS Extension inject.js loaded!');
         function showResults(results) {
             resultsContainer.innerHTML = '';
             currentResults = results;
+            selectedIndex = -1; // Reset selection when new results are shown
             
             if (results.length === 0) {
-                resultsContainer.innerHTML = '<div style="padding: 12px; color: #666;">No results found</div>';
+                resultsContainer.innerHTML = '<div style="padding: 16px; color: #b8b8b8; font-family: Assistant;">No results found</div>';
                 return;
             }
-
+        
             results.slice(0, 10).forEach((result, index) => {
                 const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.dataset.index = index; // Store index for easy reference
                 item.style.cssText = `
-                    padding: 8px 12px;
+                    padding: 12px 16px;
                     cursor: pointer;
-                    border-bottom: 1px solid #eee;
-                    ${index === 0 ? 'background: #f0f0f0;' : ''}
+                    border-bottom: 1px solid #4a4a4a;
+                    color: #e3e3e8;
+                    font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                    font-size: 14px;
+                    transition: background-color 0.1s ease;
+                    background: transparent;
                 `;
                 item.textContent = result.item.name;
                 item.addEventListener('click', () => insertIcon(result.item));
+                
+                // Updated hover handling that respects keyboard selection
                 item.addEventListener('mouseenter', () => {
-                    document.querySelectorAll('#aws-search-container [style*="background: #f0f0f0"]').forEach(el => {
-                        el.style.background = '';
-                    });
-                    item.style.background = '#f0f0f0';
+                    // Only change hover state if not keyboard navigating
+                    if (selectedIndex === -1) {
+                        clearAllSelections();
+                        item.style.background = '#404040';
+                    }
                 });
+                
+                item.addEventListener('mouseleave', () => {
+                    // Only clear hover if not keyboard selected
+                    if (selectedIndex !== index) {
+                        item.style.background = 'transparent';
+                    }
+                });
+                
                 resultsContainer.appendChild(item);
             });
         }
+
+        function clearAllSelections() {
+            document.querySelectorAll('.search-result-item').forEach(el => {
+                el.style.background = 'transparent';
+            });
+        }
+        
+        function updateSelection(newIndex) {
+            const items = document.querySelectorAll('.search-result-item');
+            const maxIndex = items.length - 1;
+            
+            // Clear all selections first
+            clearAllSelections();
+            
+            // Handle wrapping
+            if (newIndex < 0) {
+                selectedIndex = maxIndex;
+            } else if (newIndex > maxIndex) {
+                selectedIndex = 0;
+            } else {
+                selectedIndex = newIndex;
+            }
+            
+            // Highlight the selected item
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                items[selectedIndex].style.background = '#404040';
+                
+                // Scroll into view if needed
+                items[selectedIndex].scrollIntoView({
+                    block: 'nearest',
+                    behavior: 'smooth'
+                });
+            }
+        }
+        
+        function selectCurrentItem() {
+            if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+                insertIcon(currentResults[selectedIndex].item);
+                hideSearch();
+            }
+        }
+        
+        
+
+        const inputWrapper = document.createElement('div');
+inputWrapper.style.cssText = `
+    position: relative;
+`;
+
+// Move the input into the wrapper
+inputWrapper.appendChild(searchInput);
+
+// Append wrapper and results to container
+searchContainer.appendChild(inputWrapper);
+searchContainer.appendChild(resultsContainer);
+        
 
         async function insertIcon(item) {
             console.log('🎯 Attempting to insert icon:', item.name);
@@ -383,15 +481,18 @@ console.log('🚀 AWS Extension inject.js loaded!');
             const feedback = document.createElement('div');
             feedback.style.cssText = `
                 position: fixed;
-                top: 20px;
+                top: 80px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: #4CAF50;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
+                background: #31303b;
+                color: #e3e3e8;
+                padding: 12px 20px;
+                border-radius: 6px;
                 z-index: 1000000;
                 font-size: 14px;
+                font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                border: 1px solid #4a4a4a;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             `;
             feedback.textContent = message;
             document.body.appendChild(feedback);
@@ -400,6 +501,7 @@ console.log('🚀 AWS Extension inject.js loaded!');
                 feedback.remove();
             }, 3000);
         }
+        
 
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
@@ -413,17 +515,63 @@ console.log('🚀 AWS Extension inject.js loaded!');
         });
 
         searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const highlighted = resultsContainer.querySelector('[style*="background: #f0f0f0"]');
-                if (highlighted) {
-                    highlighted.click();
-                } else if (currentResults.length > 0) {
-                    insertIcon(currentResults[0].item);
+            switch(e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    updateSelection(selectedIndex + 1);
+                    break;
+                    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    updateSelection(selectedIndex - 1);
+                    break;
+                    
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedIndex >= 0) {
+                        // Use keyboard selected item
+                        selectCurrentItem();
+                    } else if (currentResults.length > 0) {
+                        // Use first result if none selected
+                        insertIcon(currentResults[0].item);
+                        hideSearch();
+                    }
+                    break;
+                    
+                case 'Escape':
                     hideSearch();
-                }
-            } else if (e.key === 'Escape') {
-                hideSearch();
+                    break;
+                    
+                case 'Tab':
+                    // Optional: Tab also selects like Enter
+                    if (selectedIndex >= 0) {
+                        e.preventDefault();
+                        selectCurrentItem();
+                    }
+                    break;
             }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            selectedIndex = -1; // Reset selection when typing
+            
+            if (query) {
+                const results = searchItems(query);
+                console.log('🔍 Search results for "' + query + '":', results.length);
+                showResults(results);
+            } else {
+                resultsContainer.innerHTML = '';
+                currentResults = [];
+            }
+        });
+        
+        searchInput.addEventListener('focus', () => {
+            searchInput.style.borderColor = '#5b9bd5';
+        });
+        
+        searchInput.addEventListener('blur', () => {
+            searchInput.style.borderColor = 'transparent';
         });
 
         function showSearch() {
@@ -437,10 +585,13 @@ console.log('🚀 AWS Extension inject.js loaded!');
             searchContainer.style.display = 'none';
             searchInput.value = '';
             resultsContainer.innerHTML = '';
+            selectedIndex = -1; // Reset selection
+            currentResults = [];
             
             // Remove focus from search input
             searchInput.blur();
         }
+        
         
 
         // Click outside to close
