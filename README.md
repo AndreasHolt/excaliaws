@@ -127,12 +127,3 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 MIT License - Feel free to use, modify, and distribute.
 
-## 🙏 Acknowledgments
-
-- **AWS** for the architecture icons
-- **Excalidraw** for the amazing diagramming tool
-- **Contributors** who help expand icon pack support
-
----
-
-**Made your diagramming workflow faster?** ⭐ Star the repo and share with your team!
