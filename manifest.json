@@ -22,7 +22,7 @@
         "run_at": "document_idle"
     }],
     
-    "permissions": ["activeTab"],
+    "permissions": ["activeTab", "storage"],
     "host_permissions": ["https://excalidraw.com/*", "https://app.excalidraw.com/*"],
     
     "web_accessible_resources": [{

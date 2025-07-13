@@ -71,23 +71,70 @@ console.log('🚀 AWS Extension inject.js loaded!');
         
         console.log('✅ Items created for search:', items.length);
 
+        // Settings management
+        const defaultSettings = {
+            searchCategories: false,
+            searchKeywords: true,
+            enabledPacks: enabledPacks.map(pack => pack.id)
+        };
+        
+        let currentSettings = { ...defaultSettings };
+        
+        // Load settings from storage
+        async function loadSettings() {
+            try {
+                const result = await chrome.storage.sync.get(['excaliawsSettings']);
+                if (result.excaliawsSettings) {
+                    currentSettings = { ...defaultSettings, ...result.excaliawsSettings };
+                }
+                console.log('📋 Settings loaded:', currentSettings);
+            } catch (error) {
+                console.log('⚠️ Using default settings:', error);
+            }
+        }
+        
+        // Save settings to storage
+        async function saveSettings() {
+            try {
+                await chrome.storage.sync.set({ excaliawsSettings: currentSettings });
+                console.log('💾 Settings saved');
+            } catch (error) {
+                console.error('❌ Failed to save settings:', error);
+            }
+        }
+        
+        // Load initial settings
+        await loadSettings();
+
         let selectedIndex = -1; // Track which result is currently selected
 
 
-        // Enhanced search function with keyword and category support
+        // Enhanced search function with settings-aware filtering
         function searchItems(query) {
             if (!query.trim()) return [];
             
             const lowerQuery = query.toLowerCase();
-            return items.filter(item => {
-                // Search in name
+            
+            // Filter by enabled packs first
+            const filteredItems = items.filter(item => 
+                currentSettings.enabledPacks.includes(item.pack.id)
+            );
+            
+            return filteredItems.filter(item => {
+                // Always search in name
                 if (item.name.toLowerCase().includes(lowerQuery)) return true;
                 
-                // Search in keywords
-                if (item.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))) return true;
+                // Search in keywords if enabled
+                if (currentSettings.searchKeywords && 
+                    item.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))) {
+                    return true;
+                }
                 
-                // Search in category
-                if (item.category.toLowerCase().includes(lowerQuery)) return true;
+                // Search in category if enabled
+                if (currentSettings.searchCategories && 
+                    item.category.toLowerCase().includes(lowerQuery)) {
+                    return true;
+                }
                 
                 return false;
             }).map(item => ({ item })); // Match Fuse.js structure
@@ -113,28 +160,184 @@ console.log('🚀 AWS Extension inject.js loaded!');
 `;
 
                 
+        const inputWrapper = document.createElement('div');
+        inputWrapper.style.cssText = `
+            position: relative;
+            display: flex;
+            align-items: center;
+        `;
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.placeholder = 'Search AWS icons...';
+        searchInput.placeholder = 'Search icons...';
         searchInput.style.cssText = `
-    width: 100%;
-    padding: 16px 16px 16px 50px;
-    border: none;
-    border-radius: 8px 8px 0 0;
-    font-size: 16px;
-    outline: none;
-    box-sizing: border-box;
-    background: #31303b;
-    color: #e3e3e8;
-    font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="rgb(184, 184, 184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>');
-    background-repeat: no-repeat;
-    background-position: 16px center;
-    background-size: 20px 20px;
-`;
+            flex: 1;
+            padding: 16px 50px 16px 50px;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            background: #31303b;
+            color: #e3e3e8;
+            font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="rgb(184, 184, 184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>');
+            background-repeat: no-repeat;
+            background-position: 16px center;
+            background-size: 20px 20px;
+        `;
 
-searchInput.setAttribute('placeholder', 'Search icons...');
+        const settingsButton = document.createElement('button');
+        settingsButton.style.cssText = `
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            z-index: 10;
+        `;
+        
+        settingsButton.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(184, 184, 184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        `;
+        
+        settingsButton.addEventListener('mouseenter', () => {
+            settingsButton.style.backgroundColor = '#404040';
+        });
+        
+        settingsButton.addEventListener('mouseleave', () => {
+            settingsButton.style.backgroundColor = 'transparent';
+        });
 
+        inputWrapper.appendChild(searchInput);
+        inputWrapper.appendChild(settingsButton);
+
+        // Create settings panel
+        const settingsPanel = document.createElement('div');
+        settingsPanel.style.cssText = `
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 300px;
+            background: #31303b;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            display: none;
+            z-index: 1000;
+            font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #e3e3e8;
+        `;
+
+        function createSettingsContent() {
+            settingsPanel.innerHTML = `
+                <div style="margin-bottom: 16px;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">Search Settings</h3>
+                    
+                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                        <input type="checkbox" ${currentSettings.searchKeywords ? 'checked' : ''} 
+                               id="searchKeywords" style="margin-right: 8px;">
+                        <span>Search in keywords</span>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; margin-bottom: 16px; cursor: pointer;">
+                        <input type="checkbox" ${currentSettings.searchCategories ? 'checked' : ''} 
+                               id="searchCategories" style="margin-right: 8px;">
+                        <span>Search in categories</span>
+                    </label>
+                </div>
+                
+                <div>
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">Icon Packs</h3>
+                    ${enabledPacks.map(pack => `
+                        <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                            <input type="checkbox" ${currentSettings.enabledPacks.includes(pack.id) ? 'checked' : ''} 
+                                   data-pack-id="${pack.id}" class="pack-toggle" style="margin-right: 8px;">
+                            <span>${pack.name}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #4a4a4a;">
+                    <button id="resetSettings" style="
+                        background: #404040;
+                        border: none;
+                        color: #e3e3e8;
+                        padding: 8px 12px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-family: inherit;
+                    ">Reset to defaults</button>
+                </div>
+            `;
+
+            // Add event listeners
+            const searchKeywordsToggle = settingsPanel.querySelector('#searchKeywords');
+            const searchCategoriesToggle = settingsPanel.querySelector('#searchCategories');
+            const packToggles = settingsPanel.querySelectorAll('.pack-toggle');
+            const resetButton = settingsPanel.querySelector('#resetSettings');
+
+            searchKeywordsToggle.addEventListener('change', (e) => {
+                currentSettings.searchKeywords = e.target.checked;
+                saveSettings();
+            });
+
+            searchCategoriesToggle.addEventListener('change', (e) => {
+                currentSettings.searchCategories = e.target.checked;
+                saveSettings();
+            });
+
+            packToggles.forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const packId = e.target.dataset.packId;
+                    if (e.target.checked) {
+                        if (!currentSettings.enabledPacks.includes(packId)) {
+                            currentSettings.enabledPacks.push(packId);
+                        }
+                    } else {
+                        currentSettings.enabledPacks = currentSettings.enabledPacks.filter(id => id !== packId);
+                    }
+                    saveSettings();
+                });
+            });
+
+            resetButton.addEventListener('click', () => {
+                currentSettings = { ...defaultSettings };
+                saveSettings();
+                createSettingsContent(); // Refresh the UI
+            });
+        }
+
+        createSettingsContent();
+        
+        // Settings button click handler
+        settingsButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = settingsPanel.style.display === 'block';
+            settingsPanel.style.display = isVisible ? 'none' : 'block';
+        });
+
+        // Close settings when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsPanel.contains(e.target) && e.target !== settingsButton) {
+                settingsPanel.style.display = 'none';
+            }
+        });
+
+        searchContainer.appendChild(settingsPanel);
         
         const resultsContainer = document.createElement('div');
         resultsContainer.style.cssText = `
@@ -150,7 +353,7 @@ searchInput.setAttribute('placeholder', 'Search icons...');
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 `;
                 
-        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(inputWrapper);
         searchContainer.appendChild(resultsContainer);
         document.body.appendChild(searchContainer);
 
@@ -267,19 +470,6 @@ searchInput.setAttribute('placeholder', 'Search icons...');
             }
         }
         
-        
-
-        const inputWrapper = document.createElement('div');
-inputWrapper.style.cssText = `
-    position: relative;
-`;
-
-// Move the input into the wrapper
-inputWrapper.appendChild(searchInput);
-
-// Append wrapper and results to container
-searchContainer.appendChild(inputWrapper);
-searchContainer.appendChild(resultsContainer);
         
 
         async function insertIcon(item) {
